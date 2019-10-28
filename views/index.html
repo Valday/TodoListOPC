@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Todo</title>
+    </head>
+ 
+    <body>
+        <h1>Todo list ++ </h1>
+
+        <div id="welcomeMessage"></div>
+
+        <form action="/" method="post" id="formulaire_addTodo">
+            <input type="text" name="inputTextTodoItem" id="newTodoItem" 
+            placeholder="Ajouter une tâche !" autofocus>
+            <input type="submit" value="add" >
+        </form>
+
+        </br><section id="todoListContainer"></section>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="http://code.jquery.com/jquery-3.4.1.min.js"></script>
+        
+        <script>      
+            var socket = io.connect('http://localhost:8080');
+
+            var nom = prompt('Quel est votre nom ?');
+            if(nom != null && nom != '') {
+                socket.emit('client_connection', nom);
+                document.title = nom + ' - '+ document.title;
+            }
+
+            socket.on('new_client', function(nom) {
+                $('#welcomeMessage').prepend('<p><em>' + nom + ', bienvenue sur votre toute nouvelle todoList !</em></p>');
+            })
+
+            socket.on('existing_client', function(nom) {
+                $('#welcomeMessage').prepend('<p><em>' + nom + ', heureux de vous revoir sur votre todoList !</em></p>');
+            })
+
+            socket.on('loadTodos', function(todos) {
+                publishTodoList(todos);
+            })
+
+            socket.on('loadTodosBroadcast', function(todos) {
+                publishTodoList(todos);
+            })
+
+            $('#formulaire_addTodo').submit(function() {
+                var newTodoItem = $('#newTodoItem').val();
+                publishNewTodoItem(newTodoItem);              
+                clearFormInput();
+
+                return false;
+            });
+
+            /**
+             * Publish les tâche déjà existantes
+             **/
+            function publishTodoList(todos) {
+                $('#todoListContainer').empty();
+
+                todos.forEach(function(item) {
+                    $('#todoListContainer').append('<li>' + item + ' <a href="#" onclick="deleteTodoItem(\'' + item + '\'); return false;">✘</a></li>');
+                });
+            }
+
+            /**
+             * Publish le nouveau todo saisi
+             **/
+            function publishNewTodoItem(todoItem) {
+                socket.emit('publishNewTodoItem', todoItem);
+                $('#todoListContainer').append('<li>' + todoItem + ' <a href="#" onclick="deleteTodoItem(\'' + todoItem + '\'); return false;">✘</a></li>');
+            }
+
+            /**
+             * Clear la zone de saisie des todos et remet le focus dessus 
+             **/
+            function clearFormInput() {
+                $('#newTodoItem').val('').focus();
+            }
+
+            function deleteTodoItem(item) {
+                socket.emit('deleteTodoItem', item);
+            }
+        </script>
+    </body>
+</html>
